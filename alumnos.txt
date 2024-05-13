@@ -1,0 +1,3 @@
+Id,Nombre,Apellido,Semestre,Carrera
+1,Juan,Perez,5,Computacion
+2,Anita,Lopez,8,Electronica
