@@ -66,6 +66,29 @@ int editar_campo_alumno(struct Alumno diccionario[], int num_entries, int id, co
     return 0; // ID no encontrado
 }
 
+
+//Seleccionar uno o una lista de campos a mostrar
+void seleccionar(struct Alumno alumno[], char **campos, int num_campos, int num_entries) {
+     for (int j = 0; j < num_entries; j++) {
+        printf("ID: %d\n", alumno[j].id);
+        for (int i = 0; i < num_campos; i++) {
+            if (strcmp(campos[i], "nombre") == 0) {
+                printf("Nombre: %s\n", alumno[j].nombre);
+            } else if (strcmp(campos[i], "apellido") == 0) {
+                printf("Apellido: %s\n", alumno[j].apellido);
+            } else if (strcmp(campos[i], "semestre") == 0) {
+                printf("Semestre: %d\n", alumno[j].semestre);
+            } else if (strcmp(campos[i], "carrera") == 0) {
+                printf("Carrera: %s\n", alumno[j].carrera);
+            } else {
+                printf("Campo no válido: %s\n", campos[i]);
+            }
+        }
+     }
+    printf("\n");
+}
+
+
 // Insertar un nuevo alumno en el diccionario
 int insertar_alumno(struct Alumno diccionario[], int *num_entries, int id, const char* nombre, const char* apellido, int semestre, const char* carrera) {
     if (*num_entries >= MAX_ENTRIES) {
@@ -173,5 +196,13 @@ int main() {
     }
     printDiccionary(num_entries,diccionario);
 
+    //Seleccionar campos
+    char ** campos[5];
+    int campos_lenght;
+
+    campos[0] = "nombre";
+    campos[1] = "apellido";
+    seleccionar(diccionario,campos,2,num_entries);
+    printDiccionary(num_entries,diccionario);
     return 0;
 }
