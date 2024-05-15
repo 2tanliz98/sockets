@@ -1,55 +1,78 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <errno.h>
 #include <string.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/un.h>
-#define SOCK_PATH "echo_socket"
-int main(void)
-{
-int s, s2, t, len;
-struct sockaddr_un local, remote;
-char str[100];
-if ((s = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
-perror("socket");
-exit(1);
-}
-local.sun_family = AF_UNIX;
-strcpy(local.sun_path, SOCK_PATH);
-unlink(local.sun_path);
-len = strlen(local.sun_path) + sizeof(local.sun_family);
-if (bind(s, (struct sockaddr *)&local, len) == -1) {
-perror("bind");
-exit(1);
-}
-if (listen(s, 5) == -1) {
-perror("listen");
-exit(1);
-}
-for(;;) {
-int done, n;
-printf("Waiting for a connection...\n");
-t = sizeof(remote);
-if ((s2 = accept(s, (struct sockaddr *)&remote, &t)) == -1) {
-perror("accept");
-exit(1);
-}
-printf("Connected.\n");
-done = 0;
-do {
-n = recv(s2, str, 100, 0);
-if (n <= 0) {
-if (n < 0) perror("recv");
-done = 1;
-}
-if (!done)
-if (send(s2, str, n, 0) < 0) {
-perror("send");
-done = 1;
-}
-} while (!done);
-close(s2);
-}
-return 0;
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+
+#define SERVER_PORT 8080
+#define BUFFER_SIZE 1024
+
+int main() {
+    int sockfd, new_sockfd;
+    struct sockaddr_in server_addr, client_addr;
+    socklen_t sin_size;
+    char buffer[BUFFER_SIZE];
+    int n;
+
+    // Crear el socket
+    if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+        perror("socket");
+        exit(1);
+    }
+
+    // Configurar la dirección del servidor
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(SERVER_PORT);
+    server_addr.sin_addr.s_addr = INADDR_ANY;
+    memset(&(server_addr.sin_zero), '\0', 8);
+
+    // Enlazar el socket a la dirección del servidor
+    if (bind(sockfd, (struct sockaddr *)&server_addr, sizeof(struct sockaddr)) == -1) {
+        perror("bind");
+        close(sockfd);
+        exit(1);
+    }
+
+    // Escuchar por conexiones entrantes
+    if (listen(sockfd, 5) == -1) {
+        perror("listen");
+        close(sockfd);
+        exit(1);
+    }
+
+    printf("Esperando conexiones...\n");
+
+    while(1) {
+        sin_size = sizeof(struct sockaddr_in);
+        if ((new_sockfd = accept(sockfd, (struct sockaddr *)&client_addr, &sin_size)) == -1) {
+            perror("accept");
+            continue;
+        }
+
+        printf("Servidor: conexión aceptada de %s\n", inet_ntoa(client_addr.sin_addr));
+
+        // Recibir y enviar datos al cliente
+        while ((n = recv(new_sockfd, buffer, BUFFER_SIZE, 0)) > 0) {
+            buffer[n] = '\0';
+            printf("Servidor: recibido '%s'\n", buffer);
+
+            if (send(new_sockfd, buffer, n, 0) == -1) {
+                perror("send");
+                close(new_sockfd);
+                break;
+            }
+        }
+
+        if (n == 0) {
+            printf("Servidor: conexión cerrada por el cliente.\n");
+        } else if (n < 0) {
+            perror("recv");
+        }
+
+        close(new_sockfd);
+    }
+
+    close(sockfd);
+    return 0;
 }

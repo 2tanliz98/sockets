@@ -112,6 +112,16 @@ int main() {
         return 1;
     }
 
+    //Menu 
+
+    //Leer buffer de socket
+    
+    //Guarda entrada de cliente
+
+
+
+
+
     char buffer[100];
     while (fgets(buffer, sizeof(buffer), archivo) != NULL) { // Leer línea por línea
         printf("%s", buffer); // Mostrar en la consola
@@ -137,7 +147,7 @@ int main() {
     fclose(archivo);
     //Mostrar el diccionario
     printDiccionary(num_entries,diccionario);
-    
+
     //Buscar un elemento por id
     searchWhere(diccionario,num_entries,1);
 
