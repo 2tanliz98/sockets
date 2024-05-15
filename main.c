@@ -15,12 +15,14 @@ struct Alumno{
 };
 
 // Función para buscar un valor en el diccionario por id
-void searchWhere(struct Alumno dict[], int size, int id) {
+void searchWhere(struct Alumno diccionario[], int size, int id) {
     printf("\nFunción search\n");
     for (int i = 0; i < size; i++) {
-        if (dict[i].id== id) {
-            //return dict[i].nombre;
+        if (diccionario[i].id== id) {
             printf("Encontrado\n");
+            printf("ID: %d, Nombre: %s, Apellido: %s, Semestre: %d, Carrera: %s\n",
+               diccionario[i].id, diccionario[i].nombre, diccionario[i].apellido,
+               diccionario[i].semestre, diccionario[i].carrera);
         }
     }
     //return -1; // Si no se encuentra la clave, devolver -1

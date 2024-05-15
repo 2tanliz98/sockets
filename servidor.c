@@ -117,14 +117,26 @@ int main() {
                     printf("\nSelect\n");
                     //la siguente palabra es * 
                     /*if(){
-
+                        //printDiccionary(num_entries,diccionario);
                     }
                     //es una lista de campos a mostrar 
                     else{
                         //mientras en el arreglo donde está almacenada la instrucción no aparezca un FROM
                         //deberá guardar los campos 
-
-                    } -----------------*/
+                        char ** campos;
+                        for (size_t i = 1; i < num_words; i++) {
+                            if (words[i] == FROM){
+                                break;
+                            }
+                            else{
+                                campos[i] = words[i];
+                            }
+                        }
+                        seleccionar(diccionario,campos,strlen(campos),num_entries);
+                        printDiccionary(num_entries,diccionario);
+                    } 
+                    //Uso de WHERE ID
+                    -----------------*/
                     
                 } else if (cmp_result == -10) {
                     printf("\nInsert\n");
@@ -132,6 +144,10 @@ int main() {
                     //buscar el id más alto para incrementar en uno su valor y evitar conflictos
                     //leer la cadena dentro de values()
                     //escribir en archivo
+                    /*
+                    insertar_alumno(diccionario, &num_entries, 3, "Luis", "Martinez", 1, "Derecho");
+                    printDiccionary(num_entries,diccionario);
+                    */
                 } else if (cmp_result == 2) {
                     printf("\nUpdate\n");
                     //buscar el WHERE con ID y traer sus valores en diccionario 
@@ -139,8 +155,24 @@ int main() {
                     //guarda el valor a SETear
                     //usa la variable key para cambiar el valor del diccionario
                     //eliminar el registro que había y escribirlo de nuevo
+                    /*
+                    if (editar_campo_alumno(diccionario, num_entries, 2, "nombre", "Ana Maria")) {
+                        printf("Nombre del alumno con ID 2 editado con éxito.\n");
+                    } else {
+                        printf("Alumno con ID 2 no encontrado o campo no válido.\n");
+                    }
+                    printDiccionary(num_entries,diccionario);
+                    */
                 } else if (cmp_result == -15) {
                     printf("\nDelete\n");
+                    /*
+                    if (eliminar_alumno(diccionario, &num_entries, id_a_eliminar)) {
+                        printf("Alumno con ID %d eliminado.\n", id_a_eliminar);
+                    } else {
+                        printf("Alumno con ID %d no encontrado.\n", id_a_eliminar);
+                    }
+                    printDiccionary(num_entries,diccionario);
+                    */
                 } else {
                     // Palabra clave no reconocida, hacer algo por defecto
                     printf("\nComando no reconocido\n");
