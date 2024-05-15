@@ -52,34 +52,57 @@ int main() {
 
         printf("Servidor: conexión aceptada de %s\n", inet_ntoa(client_addr.sin_addr));
 
-        // Recibir y enviar datos al cliente
+
+        // Arreglo dinámico de punteros a cadenas
+        char **words = NULL;
+        size_t num_words = 0;
+
+
+        // Recibir datos en un buffer temporal y guardarlos en el arreglo dinámico
+        char buffer[BUFFER_SIZE];
+
+        // Recibir datos en un buffer temporal y guardarlos en el arreglo dinámico
         while ((n = recv(new_sockfd, buffer, BUFFER_SIZE - 1, 0)) > 0) {
             buffer[n] = '\0';
             printf("Servidor: recibido '%s'\n", buffer);
-            printf("\n Buffer: %s\n",buffer[2]);
 
             // Dividir el string recibido en palabras clave
             char *token = strtok(buffer, " ");
+            while (token != NULL) {
 
-            // Tomar solo la primera palabra (token)
-            if (token != NULL) {
-                // Imprimir la palabra recibida en formato de cadena y hexadecimal
-                printf("Primera palabra recibida: '%s'\n", token);
-                for (int i = 0; token[i] != '\0'; ++i) {
-                    printf("%02x ", (unsigned char)token[i]);
+                // Redimensionar el arreglo para agregar un nuevo puntero
+                char **new_words = realloc(words, (num_words + 1) * sizeof(char *));
+                if (new_words == NULL) {
+                    perror("ERROR en realloc");
+                    close(new_sockfd);
+                    close(sockfd);
+                    exit(1);
                 }
-                printf("\n");
-            }
+                words = new_words;
 
+                // Almacenar la nueva palabra
+                words[num_words] = strdup(token);
+                if (words[num_words] == NULL) {
+                    perror("ERROR en strdup");
+                    close(new_sockfd);
+                    close(sockfd);
+                    exit(1);
+                }
+                num_words++;
 
-            // Tomar solo la primera palabra (token)
-            if (token != NULL) {
+                // Procesar todas las palabras almacenadas
+                printf("Servidor: todas las palabras recibidas:\n");
+                for (size_t i = 0; i < num_words; i++) {
+                    printf("Palabra %zu: '%s'\n", i + 1, words[i]);
+                    //free(words[i]); // Liberar la memoria de cada palabra
+                }
+                //free(words); // Liberar la memoria del arreglo de punteros
                 
-                // Imprimir el resultado de la comparación para depurar
+                 // Imprimir el resultado de la comparación para depurar
                 int cmp_result = strcasecmp(token, "select");
                 //printf("Comparación con 'select': %d\n", cmp_result);
 
-                // Aquí puedes realizar acciones basadas en la primera palabra
+                // Acciones basadas en la primera palabra
                 if (cmp_result == 0) {
                     printf("\nSelect\n");
                     //la siguente palabra es * 
@@ -91,7 +114,7 @@ int main() {
                         //mientras en el arreglo donde está almacenada la instrucción no aparezca un FROM
                         //deberá guardar los campos 
 
-                    }*/
+                    } -----------------*/
                     
                 } else if (cmp_result == -10) {
                     printf("\nInsert\n");
@@ -112,17 +135,35 @@ int main() {
                     // Palabra clave no reconocida, hacer algo por defecto
                     printf("\nComando no reconocido\n");
                 }
+
+
+
+                // Obtener el siguiente token
+                token = strtok(NULL, " ");
+
             }
-
-
 
             if (send(new_sockfd, buffer, n, 0) == -1) {
                 perror("send");
                 close(new_sockfd);
                 break;
             }
-        }
+                
+               
 
+               
+            
+
+
+        }
+        
+
+        if (n == 0) {
+            printf("Servidor: conexión cerrada por el cliente.\n");
+        } else if (n < 0) {
+            perror("recv");
+        }
+        
         if (n == 0) {
             printf("Servidor: conexión cerrada por el cliente.\n");
         } else if (n < 0) {
@@ -130,8 +171,12 @@ int main() {
         }
 
         close(new_sockfd);
+
+        
     }
 
     close(sockfd);
     return 0;
 }
+
+
