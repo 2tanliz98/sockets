@@ -1,109 +1,137 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <errno.h>
 #include <string.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
+#include <unistd.h>
 #include <arpa/inet.h>
-#include <sys/wait.h>
-#include <signal.h>
-/* the port users will be connecting to */
-#define MYPORT 3490
-/* how many pending connections queue will hold */
-#define BACKLOG 10
-void sigchld_handler(int s)
-{
- while(wait(NULL) > 0);
-}
-int main(int argc, char *argv[ ])
-{
-/* listen on sock_fd, new connection on new_fd */
-int sockfd, new_fd;
-/* my address information */
-struct sockaddr_in my_addr;
-/* connector’s address information */
-struct sockaddr_in their_addr;
-int sin_size;
-struct sigaction sa;
-int yes = 1;
-if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
-{
- perror("Server-socket() error lol!");
- exit(1);
-}
-else
-printf("Server-socket() sockfd is OK...\n");
-if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1)
-{
- perror("Server-setsockopt() error lol!");
- exit(1);
-}
-else
- printf("Server-setsockopt is OK...\n");
-/* host byte order */
-my_addr.sin_family = AF_INET;
-/* short, network byte order */
-my_addr.sin_port = htons(MYPORT);
-/* automatically fill with my IP */
-my_addr.sin_addr.s_addr = INADDR_ANY;
-printf("Server-Using %s and port %d...\n", inet_ntoa(my_addr.sin_addr), MYPORT);
-/* zero the rest of the struct */
-memset(&(my_addr.sin_zero), '\0', 8);
-if(bind(sockfd, (struct sockaddr *)&my_addr, sizeof(struct sockaddr)) == -1)
-{
- perror("Server-bind() error");
- exit(1);
-}
-else
- printf("Server-bind() is OK...\n");
-if(listen(sockfd, BACKLOG) == -1)
-{
- perror("Server-listen() error");
- exit(1);
-}
-printf("Server-listen() is OK...Listening...\n");
-/* clean all the dead processes */
-sa.sa_handler = sigchld_handler;
-sigemptyset(&sa.sa_mask);
-sa.sa_flags = SA_RESTART;
-if(sigaction(SIGCHLD, &sa, NULL) == -1)
-{
- perror("Server-sigaction() error");
- exit(1);
-}
-else
- printf("Server-sigaction() is OK...\n");
-/* accept() loop */
-while(1)
-{
-sin_size = sizeof(struct sockaddr_in);
-if((new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &sin_size)) == -1)
-{
- perror("Server-accept() error");
- continue;
-}
-else
- printf("Server-accept() is OK...\n");
-printf("Server-new socket, new_fd is OK...\n");
-printf("Server: Got connection from %s\n", inet_ntoa(their_addr.sin_addr));
-/* this is the child process */
-if(!fork())
-{
- /* child doesn’t need the listener */
- close(sockfd);
+#include <netinet/in.h>
 
- if(send(new_fd, "This is a test string from server!\n", 37, 0) == -1)
- perror("Server-send() error lol!");
- close(new_fd);
- exit(0);
-}
-else
- printf("Server-send is OK...!\n");
-/* parent doesn’t need this*/
-close(new_fd);
-printf("Server-new socket, new_fd closed successfully...\n");
-}
-return 0;
+#define SERVER_PORT 8080
+#define BUFFER_SIZE 1024
+
+int main() {
+    int sockfd, new_sockfd;
+    struct sockaddr_in server_addr, client_addr;
+    socklen_t sin_size;
+    char buffer[BUFFER_SIZE];
+    int n;
+
+    // Crear el socket
+    if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+        perror("socket");
+        exit(1);
+    }
+
+    // Configurar la dirección del servidor
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(SERVER_PORT);
+    server_addr.sin_addr.s_addr = INADDR_ANY;
+    memset(&(server_addr.sin_zero), '\0', 8);
+
+    // Enlazar el socket a la dirección del servidor
+    if (bind(sockfd, (struct sockaddr *)&server_addr, sizeof(struct sockaddr)) == -1) {
+        perror("bind");
+        close(sockfd);
+        exit(1);
+    }
+
+    // Escuchar por conexiones entrantes
+    if (listen(sockfd, 5) == -1) {
+        perror("listen");
+        close(sockfd);
+        exit(1);
+    }
+
+    printf("Esperando conexiones...\n");
+
+    while(1) {
+        sin_size = sizeof(struct sockaddr_in);
+        if ((new_sockfd = accept(sockfd, (struct sockaddr *)&client_addr, &sin_size)) == -1) {
+            perror("accept");
+            continue;
+        }
+
+        printf("Servidor: conexión aceptada de %s\n", inet_ntoa(client_addr.sin_addr));
+
+        // Recibir y enviar datos al cliente
+        while ((n = recv(new_sockfd, buffer, BUFFER_SIZE - 1, 0)) > 0) {
+            buffer[n] = '\0';
+            printf("Servidor: recibido '%s'\n", buffer);
+            printf("\n Buffer: %s\n",buffer[2]);
+
+            // Dividir el string recibido en palabras clave
+            char *token = strtok(buffer, " ");
+
+            // Tomar solo la primera palabra (token)
+            if (token != NULL) {
+                // Imprimir la palabra recibida en formato de cadena y hexadecimal
+                printf("Primera palabra recibida: '%s'\n", token);
+                for (int i = 0; token[i] != '\0'; ++i) {
+                    printf("%02x ", (unsigned char)token[i]);
+                }
+                printf("\n");
+            }
+
+
+            // Tomar solo la primera palabra (token)
+            if (token != NULL) {
+                
+                // Imprimir el resultado de la comparación para depurar
+                int cmp_result = strcasecmp(token, "select");
+                //printf("Comparación con 'select': %d\n", cmp_result);
+
+                // Aquí puedes realizar acciones basadas en la primera palabra
+                if (cmp_result == 0) {
+                    printf("\nSelect\n");
+                    //la siguente palabra es * 
+                    /*if(){
+
+                    }
+                    //es una lista de campos a mostrar 
+                    else{
+                        //mientras en el arreglo donde está almacenada la instrucción no aparezca un FROM
+                        //deberá guardar los campos 
+
+                    }*/
+                    
+                } else if (cmp_result == -10) {
+                    printf("\nInsert\n");
+                    //autoincremental
+                    //buscar el id más alto para incrementar en uno su valor y evitar conflictos
+                    //leer la cadena dentro de values()
+                    //escribir en archivo
+                } else if (cmp_result == 2) {
+                    printf("\nUpdate\n");
+                    //buscar el WHERE con ID y traer sus valores en diccionario 
+                    //leer y guardar la cadena después de SET
+                    //guarda el valor a SETear
+                    //usa la variable key para cambiar el valor del diccionario
+                    //eliminar el registro que había y escribirlo de nuevo
+                } else if (cmp_result == -15) {
+                    printf("\nDelete\n");
+                } else {
+                    // Palabra clave no reconocida, hacer algo por defecto
+                    printf("\nComando no reconocido\n");
+                }
+            }
+
+
+
+            if (send(new_sockfd, buffer, n, 0) == -1) {
+                perror("send");
+                close(new_sockfd);
+                break;
+            }
+        }
+
+        if (n == 0) {
+            printf("Servidor: conexión cerrada por el cliente.\n");
+        } else if (n < 0) {
+            perror("recv");
+        }
+
+        close(new_sockfd);
+    }
+
+    close(sockfd);
+    return 0;
 }
