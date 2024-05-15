@@ -90,16 +90,26 @@ int main() {
                 }
                 num_words++;
 
-                // Procesar todas las palabras almacenadas
+
+                // Obtener el siguiente token
+                token = strtok(NULL, " ");
+
+            }
+
+            // Procesar todas las palabras almacenadas
+            char *token_1;
                 printf("Servidor: todas las palabras recibidas:\n");
                 for (size_t i = 0; i < num_words; i++) {
+                    if (i == 0){
+                        token_1 = words[0];
+                    }
                     printf("Palabra %zu: '%s'\n", i + 1, words[i]);
                     //free(words[i]); // Liberar la memoria de cada palabra
                 }
                 //free(words); // Liberar la memoria del arreglo de punteros
                 
                  // Imprimir el resultado de la comparación para depurar
-                int cmp_result = strcasecmp(token, "select");
+                int cmp_result = strcasecmp(token_1, "select");
                 //printf("Comparación con 'select': %d\n", cmp_result);
 
                 // Acciones basadas en la primera palabra
@@ -136,12 +146,6 @@ int main() {
                     printf("\nComando no reconocido\n");
                 }
 
-
-
-                // Obtener el siguiente token
-                token = strtok(NULL, " ");
-
-            }
 
             if (send(new_sockfd, buffer, n, 0) == -1) {
                 perror("send");
