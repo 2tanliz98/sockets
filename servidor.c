@@ -62,10 +62,10 @@ int main() {
     regex_t regex_select, regex_insert, regex_update, regex_delete;
     int regerr,regerr1,regerr2,regerr3;
 
-    regerr = regcomp(&regex_select,  "^SELECT [A-z]+|. FROM [A-z]+", REG_EXTENDED );
+    regerr = regcomp(&regex_select,  "^SELECT . FROM [A-z]+", REG_EXTENDED );
     regerr1 = regcomp(&regex_insert, "^INSERT INTO [A-z]+ VALUES .+", REG_EXTENDED );
-    regerr2 = regcomp(&regex_update, "^UPDATE [A-z]+ SET .+ WHERE .+", REG_EXTENDED );
-    regerr3 = regcomp(&regex_delete, "^DELETE FROM [A-z]+ WHERE .+", REG_EXTENDED );
+    regerr2 = regcomp(&regex_update, "^UPDATE [A-z]+ SET .+ WHERE id = [0-9]+$", REG_EXTENDED );
+    regerr3 = regcomp(&regex_delete, "^DELETE FROM [A-z]+ WHERE id = [0-9]+$", REG_EXTENDED );
     
     if (regerr == 0 && regerr1 == 0 && regerr2  == 0 && regerr3  == 0 )
     {
@@ -163,29 +163,12 @@ int main() {
             //Remover el caracter de nueva linea
             buffer[strcspn(buffer, "\n")] = 0;
             printf("Servidor: recibido '%s'\n", buffer);
-            printf("\n Buffer: %d\n",buffer[2]);  // [!] Formato debe ser %d, se imprime un solo un byte (char).
-
-            // Dividir el string recibido en palabras clave 
-            //[!] Tokenizar despues de parsear el comando.
-            //    La tokenizacion altera el buffer original agregando '\000' entre tokens. 
-            //    por lo cual impide el parseo con regex
-            
-            
 
             // Tomar solo la primera palabra (token)
             if (buffer != NULL) {
 
-                // Imprimir la palabra recibida en formato de cadena y hexadecimal
-                //printf("Primera palabra recibida: '%s'\n", token);
-                #if 0
-                for (int i = 0; buffer[i] != '\n'; ++i) {
-                    printf("%02x ", (unsigned char)token[i]);
-                }
-                #endif
                 printf("\n");
                 
-                // Imprimir el resultado de la comparación para depurar
-
                 // [!] Comparar el resultado con regex!     
                 regerr  = regexec(&regex_select, buffer , 0, NULL, 0);
                 regerr1 = regexec(&regex_insert, buffer , 0, NULL, 0); 
@@ -229,9 +212,6 @@ int main() {
                         //seleccionar(diccionario,params,num_params,num_entries);
                     }
                     
-                    
-
-
                     //[!] Liberar memoria
                     free(token);
                     free(params[0]);
@@ -261,9 +241,9 @@ int main() {
                     }
 
 
-                    int id =  max_id(diccionario)+1;
+                    int id =  max_id(diccionario, num_entries);
                     printDiccionary(num_entries,diccionario);
-                    insertar_alumno(diccionario, &num_entries, id, params);
+                    insertar_alumno(diccionario, &num_entries, id+1, params);
                     escribir_alumnos(diccionario, num_entries);
                     printDiccionary(num_entries,diccionario);
 
@@ -321,8 +301,6 @@ int main() {
                     }
                     printDiccionary(num_entries,diccionario);
 
-
-
                      //[!] Liberar memoria
                     free(token);
                     free(params_update[0]);
@@ -333,37 +311,35 @@ int main() {
                 {
                     printf("\nDelete\n");
 
-
-                    char *token = strtok(buffer, " ");
+                    // Se utiliza una nueva variable de token para la segunda iteración
+                    char *token_delete = strtok(buffer, " ");
                     int id;
                     int i = 0;
-                    while(token != 0)
-                    {
-                        printf("%s, ",token);
-                        //Poblar arreglo de parametros ignorando keywords.
-                        if ( !es_keyword(token))
-                        {
-                           // Agregando cada parametro al arreglo de cadenas
-                           id = atoi(token);
+                    while (token_delete != 0) {
+                        printf("%s, ", token_delete);
+                        // Poblar arreglo de parametros ignorando keywords.
+                        if (!es_keyword(token_delete)) {
+                            // Agregando id
+                            id = atoi(token_delete);
                             i++;
+                            printf("id= %d", id);
                         }
-                        //Iterar al siguiente token
-                        token = strtok(0," ");
+                        // Iterar al siguiente token
+                        token_delete = strtok(0, " ");
                     }
 
-                    int id_a_eliminar = 1;
-                    if (eliminar_alumno(diccionario, &num_entries, id_a_eliminar)) {
+                    if (eliminar_alumno(diccionario, &num_entries, id)) {
                         escribir_alumnos(diccionario, num_entries);
-                        printf("Alumno con ID %d eliminado.\n", id_a_eliminar);
+                        printf("Alumno con ID %d eliminado.\n", id);
                     } else {
-                        printf("Alumno con ID %d no encontrado.\n", id_a_eliminar);
+                        printf("Alumno con ID %d no encontrado.\n", id);
                     }
                     printDiccionary(num_entries,diccionario);
                     
 
 
                      //[!] Liberar memoria
-                    free(token);
+                    //free(token);
 
                     
                 }
