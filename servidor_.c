@@ -24,7 +24,7 @@ int es_keyword(const char* token) {
     return 0;
 }
 
-// Función para escribir el contenido del diccionario en un archivo
+// Función para escribir el contenido del diccionario en un archivo en el formato especificado
 void escribir_alumnos(struct Alumno diccionario[], int num_entries) {
     FILE *file = fopen("alumnos.txt", "w");
     if (file == NULL) {
@@ -32,17 +32,22 @@ void escribir_alumnos(struct Alumno diccionario[], int num_entries) {
         return;
     }
 
+    // Escribir encabezado
+    fprintf(file, "Id,Nombre,Apellido,Semestre,Carrera\n");
+
+    // Escribir contenido del diccionario
     for (int i = 0; i < num_entries; i++) {
-        fprintf(file, "ID: %d\n", diccionario[i].id);
-        fprintf(file, "Nombre: %s\n", diccionario[i].nombre);
-        fprintf(file, "Apellido: %s\n", diccionario[i].apellido);
-        fprintf(file, "Semestre: %d\n", diccionario[i].semestre);
-        fprintf(file, "Carrera: %s\n", diccionario[i].carrera);
-        fprintf(file, "\n"); // Separar registros con una línea en blanco
+        fprintf(file, "%d,%s,%s,%d,%s\n", 
+                diccionario[i].id, 
+                diccionario[i].nombre, 
+                diccionario[i].apellido, 
+                diccionario[i].semestre, 
+                diccionario[i].carrera);
     }
 
     fclose(file);
 }
+
 
 
 int main() {
@@ -204,7 +209,7 @@ int main() {
                            // Agregando cada parametro al arreglo de cadenas
                             params[i] = malloc(strlen(token) * sizeof(char*) ); 
                             strcpy(params[i], token);
-                            printf("\nPARAMETROS: %s\n",params[i]);
+                            //printf("\nPARAMETROS: %s\n",params[i]);
                             i++;
                         }
                         
@@ -248,7 +253,7 @@ int main() {
                            // Agregando cada parametro al arreglo de cadenas
                             params[i] = malloc(strlen(token) * sizeof(char*) ); 
                             strcpy(params[i], token);
-                            printf("\nPARAMETROS: %s\n",params[i]);
+                            //printf("\nPARAMETROS: %s\n",params[i]);
                             i++;
                         }
                         //Iterar al siguiente token
@@ -285,7 +290,7 @@ int main() {
                            // Agregando cada parametro al arreglo de cadenas
                             params_update[i] = malloc(strlen(token) * sizeof(char*) ); 
                             strcpy(params_update[i], token);
-                            printf("\nPARAMETROS update: %s\n",params_update[i]);
+                            //printf("\nPARAMETROS update: %s\n",params_update[i]);
                             i++;
                         }
                         //Iterar al siguiente token
@@ -300,7 +305,7 @@ int main() {
                         {
                            // Agregando cada parametro al arreglo de cadenas
                             id = atoi(token);
-                            printf("\nPARAMETROS id: %d\n",id);
+                            //printf("\nPARAMETROS id: %d\n",id);
                             i++;
                         }
                         //Iterar al siguiente token
