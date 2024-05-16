@@ -3,8 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define TANIA_DB_MAX_LINE_LENGTH 100
-#define TANIA_DB_MAX_ENTRIES 100
+#define MAX_LINE_LENGTH 100
+#define MAX_ENTRIES 100
 
 // Definición de la estructura para el diccionario
 struct Alumno{
@@ -29,7 +29,7 @@ void searchWhere(struct Alumno diccionario[], int size, int id) {
     //return -1; // Si no se encuentra la clave, devolver -1
 }
 
-//Eliminar un elemento por id
+// Eliminar un elemento por id
 int eliminar_alumno(struct Alumno diccionario[], int *num_entries, int id) {
     int encontrado = 0;
 
@@ -47,6 +47,8 @@ int eliminar_alumno(struct Alumno diccionario[], int *num_entries, int id) {
 
     return encontrado;
 }
+
+
 //Update 
 // Editar un campo específico de un alumno en el diccionario por su ID
 int editar_campo_alumno(struct Alumno diccionario[], int num_entries, int id, const char* campo, const void* valor) {
@@ -95,7 +97,7 @@ void seleccionar(struct Alumno alumno[], char **campos, int num_campos, int num_
 // Insertar un nuevo alumno en el diccionario
 int insertar_alumno(struct Alumno diccionario[], int *num_entries, int id,  char* parametros[]) {
 
-    if (*num_entries >= TANIA_DB_MAX_ENTRIES) {
+    if (*num_entries >= MAX_ENTRIES) {
         // No hay espacio en el diccionario
         return 0;
     }
@@ -133,112 +135,16 @@ void printDiccionary(int num_entries,struct Alumno *diccionario){
     }
 }
 
-
 //Encontrar el id de mayor rango
-int max_id(struct Alumno * diccionario){
-    // Obtener el tamaño del arreglo
-    int n = sizeof(diccionario) / sizeof(diccionario[0]);
-    printf("TAMANO ARREGLO ACTUAL: %d",n);
-
+int max_id(struct Alumno *diccionario, int num_entries) {
     // Variable para almacenar el mayor id
     int mayor_id = diccionario[0].id;
 
     // Iterar a través del arreglo para encontrar el mayor id
-    for (int i = 1; i < n; i++) {
+    for (int i = 1; i < num_entries; i++) {
         if (diccionario[i].id > mayor_id) {
             mayor_id = diccionario[i].id;
         }
     }
     return mayor_id;
 }
-
-#if 0
-int main() {
-    FILE *archivo;
-    char line[TANIA_DB_MAX_LINE_LENGTH];
-    struct Alumno diccionario[TANIA_DB_MAX_ENTRIES];
-    int num_entries = 0;
-
-    int id, semestre;
-    char nombre[50],  apellido[50], carrera[50];
-
-// Leer desde un archivo
-    archivo = fopen("alumnos.txt", "r"); // Abrir el archivo en modo lectura
-    if (archivo == NULL) {
-        printf("No se pudo abrir el archivo.\n");
-        return 1;
-    }
-
-    //Menu 
-
-    //Leer buffer de socket
-    
-    //Guarda entrada de cliente
-
-
-
-
-
-    char buffer[100];
-    while (fgets(buffer, sizeof(buffer), archivo) != NULL) { // Leer línea por línea
-        printf("%s", buffer); // Mostrar en la consola
-    
-        // Dividir la línea y guardar los datos en variables
-        int id, semestre;
-        char nombre[50], apellido[50], carrera[50];
-
-        sscanf(buffer, "%d,%49[^,],%49[^,],%d,%49[^\n]", &id, nombre, apellido, &semestre, carrera);
-        
-        // Guardar los datos en el arreglo de estructuras
-        diccionario[num_entries].id = id;
-        strcpy(diccionario[num_entries].nombre, nombre);
-        strcpy(diccionario[num_entries].apellido, apellido);
-        diccionario[num_entries].semestre = semestre;
-        strcpy(diccionario[num_entries].carrera, carrera);
-        
-        num_entries++;
-    }
-
-
-    // Cerrar el archivo
-    fclose(archivo);
-    //Mostrar el diccionario
-    printDiccionary(num_entries,diccionario);
-
-    //Buscar un elemento por id
-    searchWhere(diccionario,num_entries,1);
-
-    //Insertar elemento
-    insertar_alumno(diccionario, &num_entries, 3, "Luis", "Martinez", 1, "Derecho");
-    printDiccionary(num_entries,diccionario);
-
-    //Editar
-    // Editar el campo 'nombre' del alumno con ID 2
-    if (editar_campo_alumno(diccionario, num_entries, 2, "nombre", "Ana Maria")) {
-        printf("Nombre del alumno con ID 2 editado con éxito.\n");
-    } else {
-        printf("Alumno con ID 2 no encontrado o campo no válido.\n");
-    }
-    printDiccionary(num_entries,diccionario);
-
-    //Borrar elemento por id
-    int id_a_eliminar = 1;
-    if (eliminar_alumno(diccionario, &num_entries, id_a_eliminar)) {
-        printf("Alumno con ID %d eliminado.\n", id_a_eliminar);
-    } else {
-        printf("Alumno con ID %d no encontrado.\n", id_a_eliminar);
-    }
-    printDiccionary(num_entries,diccionario);
-
-    //Seleccionar campos
-    char ** campos[5];
-    int campos_lenght;
-
-    campos[0] = "nombre";
-    campos[1] = "apellido";
-    seleccionar(diccionario,campos,2,num_entries);
-    printDiccionary(num_entries,diccionario);
-    return 0;
-}
-
-#endif
