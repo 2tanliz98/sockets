@@ -1,3 +1,5 @@
+//servidor.c
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -5,8 +7,48 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 
-#define SERVER_PORT 8080
+#include <regex.h>
+#include "database.h"
+
+#define SERVER_PORT 3306
 #define BUFFER_SIZE 1024
+
+int es_keyword(const char* token) {
+    const char* keywords[] = {"INSERT", "INTO", "VALUES", "(", ")", "alumnos","SET","DELETE","SELECT", "UPDATE", "WHERE", "FROM", "="};
+    size_t num_keywords = sizeof(keywords) / sizeof(keywords[0]);
+    for (size_t i = 0; i < num_keywords; ++i) {
+        if (strcmp(token, keywords[i]) == 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+// Función para escribir el contenido del diccionario en un archivo en el formato especificado
+void escribir_alumnos(struct Alumno diccionario[], int num_entries) {
+    FILE *file = fopen("alumnos.txt", "w");
+    if (file == NULL) {
+        perror("Error al abrir el archivo");
+        return;
+    }
+
+    // Escribir encabezado
+    fprintf(file, "Id,Nombre,Apellido,Semestre,Carrera\n");
+
+    // Escribir contenido del diccionario
+    for (int i = 0; i < num_entries; i++) {
+        fprintf(file, "%d,%s,%s,%d,%s\n", 
+                diccionario[i].id, 
+                diccionario[i].nombre, 
+                diccionario[i].apellido, 
+                diccionario[i].semestre, 
+                diccionario[i].carrera);
+    }
+
+    fclose(file);
+}
+
+
 
 int main() {
     int sockfd, new_sockfd;
@@ -14,6 +56,69 @@ int main() {
     socklen_t sin_size;
     char buffer[BUFFER_SIZE];
     int n;
+
+
+    // Crear Expresiones regulares para validar peticiones del cliente. 
+    regex_t regex_select, regex_insert, regex_update, regex_delete;
+    int regerr,regerr1,regerr2,regerr3;
+
+    regerr = regcomp(&regex_select,  "^SELECT [A-z]+|. FROM [A-z]+", REG_EXTENDED );
+    regerr1 = regcomp(&regex_insert, "^INSERT INTO [A-z]+ VALUES .+", REG_EXTENDED );
+    regerr2 = regcomp(&regex_update, "^UPDATE [A-z]+ SET .+ WHERE .+", REG_EXTENDED );
+    regerr3 = regcomp(&regex_delete, "^DELETE FROM [A-z]+ WHERE .+", REG_EXTENDED );
+    
+    if (regerr == 0 && regerr1 == 0 && regerr2  == 0 && regerr3  == 0 )
+    {
+        printf("all regex compiled successfully\n");
+    } else
+    {
+        printf(" regex compilation error\n" );
+    }
+
+
+    //INICIARLIZAR BASE DE DATOS.
+    FILE *archivo;
+    char line[TANIA_DB_MAX_LINE_LENGTH];
+    struct Alumno diccionario[TANIA_DB_MAX_ENTRIES];
+    int num_entries = 0;
+
+    int id, semestre;
+    char nombre[50],  apellido[50], carrera[50];
+
+    // Leer desde un archivo
+    archivo = fopen("alumnos.txt", "r"); // Abrir el archivo en modo lectura
+    if (archivo == NULL) {
+        printf("No se pudo abrir el archivo.\n");
+        return 1;
+    }
+
+    char filebuffer[100];
+    while (fgets(filebuffer, sizeof(filebuffer), archivo) != NULL) { // Leer línea por línea
+        printf("%s", filebuffer); // Mostrar en la consola
+    
+        // Dividir la línea y guardar los datos en variables
+        int id, semestre;
+        char nombre[50], apellido[50], carrera[50];
+
+        sscanf(filebuffer, "%d,%49[^,],%49[^,],%d,%49[^\n]", &id, nombre, apellido, &semestre, carrera);
+        
+        // Guardar los datos en el arreglo de estructuras
+        diccionario[num_entries].id = id;
+        strcpy(diccionario[num_entries].nombre, nombre);
+        strcpy(diccionario[num_entries].apellido, apellido);
+        diccionario[num_entries].semestre = semestre;
+        strcpy(diccionario[num_entries].carrera, carrera);
+        
+        num_entries++;
+    }
+    // Cerrar el archivo
+    fclose(archivo);
+
+
+
+
+
+
 
     // Crear el socket
     if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
@@ -52,154 +157,226 @@ int main() {
 
         printf("Servidor: conexión aceptada de %s\n", inet_ntoa(client_addr.sin_addr));
 
-
-        // Arreglo dinámico de punteros a cadenas
-        char **words = NULL;
-        size_t num_words = 0;
-
-
-        // Recibir datos en un buffer temporal y guardarlos en el arreglo dinámico
-        char buffer[BUFFER_SIZE];
-
-        // Recibir datos en un buffer temporal y guardarlos en el arreglo dinámico
+        // Recibir y enviar datos al cliente
         while ((n = recv(new_sockfd, buffer, BUFFER_SIZE - 1, 0)) > 0) {
-            buffer[n] = '\0';
+            
+            //Remover el caracter de nueva linea
+            buffer[strcspn(buffer, "\n")] = 0;
             printf("Servidor: recibido '%s'\n", buffer);
+            printf("\n Buffer: %d\n",buffer[2]);  // [!] Formato debe ser %d, se imprime un solo un byte (char).
 
-            // Dividir el string recibido en palabras clave
-            char *token = strtok(buffer, " ");
-            while (token != NULL) {
+            // Dividir el string recibido en palabras clave 
+            //[!] Tokenizar despues de parsear el comando.
+            //    La tokenizacion altera el buffer original agregando '\000' entre tokens. 
+            //    por lo cual impide el parseo con regex
+            
+            
 
-                // Redimensionar el arreglo para agregar un nuevo puntero
-                char **new_words = realloc(words, (num_words + 1) * sizeof(char *));
-                if (new_words == NULL) {
-                    perror("ERROR en realloc");
-                    close(new_sockfd);
-                    close(sockfd);
-                    exit(1);
+            // Tomar solo la primera palabra (token)
+            if (buffer != NULL) {
+
+                // Imprimir la palabra recibida en formato de cadena y hexadecimal
+                //printf("Primera palabra recibida: '%s'\n", token);
+                #if 0
+                for (int i = 0; buffer[i] != '\n'; ++i) {
+                    printf("%02x ", (unsigned char)token[i]);
                 }
-                words = new_words;
-
-                // Almacenar la nueva palabra
-                words[num_words] = strdup(token);
-                if (words[num_words] == NULL) {
-                    perror("ERROR en strdup");
-                    close(new_sockfd);
-                    close(sockfd);
-                    exit(1);
-                }
-                num_words++;
-
-
-                // Obtener el siguiente token
-                token = strtok(NULL, " ");
-
-            }
-
-            // Procesar todas las palabras almacenadas
-            char *token_1;
-                printf("Servidor: todas las palabras recibidas:\n");
-                for (size_t i = 0; i < num_words; i++) {
-                    if (i == 0){
-                        token_1 = words[0];
-                    }
-                    printf("Palabra %zu: '%s'\n", i + 1, words[i]);
-                    //free(words[i]); // Liberar la memoria de cada palabra
-                }
-                //free(words); // Liberar la memoria del arreglo de punteros
+                #endif
+                printf("\n");
                 
-                 // Imprimir el resultado de la comparación para depurar
-                int cmp_result = strcasecmp(token_1, "select");
-                //printf("Comparación con 'select': %d\n", cmp_result);
+                // Imprimir el resultado de la comparación para depurar
 
-                // Acciones basadas en la primera palabra
-                if (cmp_result == 0) {
+                // [!] Comparar el resultado con regex!     
+                regerr  = regexec(&regex_select, buffer , 0, NULL, 0);
+                regerr1 = regexec(&regex_insert, buffer , 0, NULL, 0); 
+                regerr2 = regexec(&regex_update, buffer , 0, NULL, 0); 
+                regerr3 = regexec(&regex_delete, buffer , 0, NULL, 0); 
+
+                
+                // Realizar accion de acuerdo con la regex que haga match
+                if (regerr == 0) 
+                {
                     printf("\nSelect\n");
-                    //la siguente palabra es * 
-                    /*if(){
-                        //printDiccionary(num_entries,diccionario);
-                    }
-                    //es una lista de campos a mostrar 
-                    else{
-                        //mientras en el arreglo donde está almacenada la instrucción no aparezca un FROM
-                        //deberá guardar los campos 
-                        char ** campos;
-                        for (size_t i = 1; i < num_words; i++) {
-                            if (words[i] == FROM){
-                                break;
-                            }
-                            else{
-                                campos[i] = words[i];
-                            }
+                    char *token = strtok(buffer, " ");
+                    char* params[2];
+                    int i = 0;
+                    while(token != 0)
+                    {
+                        printf("%s, ",token);
+                        //poblar el arreglo de parametros
+                         if ( !es_keyword(token))
+                        {
+                           // Agregando cada parametro al arreglo de cadenas
+                            params[i] = malloc(strlen(token) * sizeof(char*) ); 
+                            strcpy(params[i], token);
+                            //printf("\nPARAMETROS: %s\n",params[i]);
+                            i++;
                         }
-                        seleccionar(diccionario,campos,strlen(campos),num_entries);
-                        printDiccionary(num_entries,diccionario);
-                    } 
-                    //Uso de WHERE ID
-                    -----------------*/
+                        
+                        //Iterar al siguiente token
+                        token = strtok(0," ");
+                    }
+
+                    //[!] Arreglo Params ahora tiene los parametros para hacer la "consulta".
                     
-                } else if (cmp_result == -10) {
+
+                    if (strcmp(params[0], "*") == 0) // Caso mas simple, SELECT *
+                    {
+                        printDiccionary(num_entries,diccionario);
+                    } else
+                    {
+                        //int num_params = strlen(diccionario);
+                        //seleccionar(diccionario,params,num_params,num_entries);
+                    }
+                    
+                    
+
+
+                    //[!] Liberar memoria
+                    free(token);
+                    free(params[0]);
+                    free(params[1]);
+                    
+                } else if (regerr1 == 0)
+                {
                     printf("\nInsert\n");
-                    //autoincremental
-                    //buscar el id más alto para incrementar en uno su valor y evitar conflictos
-                    //leer la cadena dentro de values()
-                    //escribir en archivo
-                    /*
-                    insertar_alumno(diccionario, &num_entries, 3, "Luis", "Martinez", 1, "Derecho");
+
+                    char *token = strtok(buffer, " ");
+                    char* params[4];
+                    int i = 0;
+                    while(token != 0)
+                    {
+                        printf("%s, ",token);
+                        //Poblar arreglo de parametros ignorando keywords.
+                        if ( !es_keyword(token))
+                        {
+                           // Agregando cada parametro al arreglo de cadenas
+                            params[i] = malloc(strlen(token) * sizeof(char*) ); 
+                            strcpy(params[i], token);
+                            //printf("\nPARAMETROS: %s\n",params[i]);
+                            i++;
+                        }
+                        //Iterar al siguiente token
+                        token = strtok(0," ");
+                    }
+
+
+                    int id =  max_id(diccionario)+1;
                     printDiccionary(num_entries,diccionario);
-                    */
-                } else if (cmp_result == 2) {
+                    insertar_alumno(diccionario, &num_entries, id, params);
+                    escribir_alumnos(diccionario, num_entries);
+                    printDiccionary(num_entries,diccionario);
+
+                    
+                    //[!] Liberar memoria
+                    free(token);
+                    free(params[0]);
+                    free(params[1]);
+
+                } else if (regerr2 == 0)
+                {
                     printf("\nUpdate\n");
-                    //buscar el WHERE con ID y traer sus valores en diccionario 
-                    //leer y guardar la cadena después de SET
-                    //guarda el valor a SETear
-                    //usa la variable key para cambiar el valor del diccionario
-                    //eliminar el registro que había y escribirlo de nuevo
-                    /*
-                    if (editar_campo_alumno(diccionario, num_entries, 2, "nombre", "Ana Maria")) {
-                        printf("Nombre del alumno con ID 2 editado con éxito.\n");
+
+                    char *token = strtok(buffer, " ");
+                    char* params_update[3];
+                    int id;
+                    int i = 0;
+                    while(token != 0 && !strcmp(token, "WHERE") == 0)
+                    {
+                        printf("%s, ",token);
+                        //Poblar arreglo de parametros ignorando keywords.
+                        if ( !es_keyword(token))
+                        {
+                           // Agregando cada parametro al arreglo de cadenas
+                            params_update[i] = malloc(strlen(token) * sizeof(char*) ); 
+                            strcpy(params_update[i], token);
+                            //printf("\nPARAMETROS update: %s\n",params_update[i]);
+                            i++;
+                        }
+                        //Iterar al siguiente token
+                        token = strtok(0," ");
+                    }
+
+                    while(token != 0)
+                    {
+                        printf("%s, ",token);
+                        //Poblar arreglo de parametros ignorando keywords.
+                        if ( !es_keyword(token))
+                        {
+                           // Agregando cada parametro al arreglo de cadenas
+                            id = atoi(token);
+                            //printf("\nPARAMETROS id: %d\n",id);
+                            i++;
+                        }
+                        //Iterar al siguiente token
+                        token = strtok(0," ");
+                    }
+
+
+                    if (editar_campo_alumno(diccionario, num_entries,id, params_update[0], params_update[1])) {
+                        escribir_alumnos(diccionario, num_entries);
+                        printf("Nombre del alumno con ID %d editado con éxito.\n", id);
                     } else {
-                        printf("Alumno con ID 2 no encontrado o campo no válido.\n");
+                        printf("Alumno con ID %d no encontrado o campo no válido.\n",id);
                     }
                     printDiccionary(num_entries,diccionario);
-                    */
-                } else if (cmp_result == -15) {
+
+
+
+                     //[!] Liberar memoria
+                    free(token);
+                    free(params_update[0]);
+                    free(params_update[1]);
+
+
+                } else if (regerr3 == 0)
+                {
                     printf("\nDelete\n");
-                    /*
+
+
+                    char *token = strtok(buffer, " ");
+                    int id;
+                    int i = 0;
+                    while(token != 0)
+                    {
+                        printf("%s, ",token);
+                        //Poblar arreglo de parametros ignorando keywords.
+                        if ( !es_keyword(token))
+                        {
+                           // Agregando cada parametro al arreglo de cadenas
+                           id = atoi(token);
+                            i++;
+                        }
+                        //Iterar al siguiente token
+                        token = strtok(0," ");
+                    }
+
+                    int id_a_eliminar = 1;
                     if (eliminar_alumno(diccionario, &num_entries, id_a_eliminar)) {
+                        escribir_alumnos(diccionario, num_entries);
                         printf("Alumno con ID %d eliminado.\n", id_a_eliminar);
                     } else {
                         printf("Alumno con ID %d no encontrado.\n", id_a_eliminar);
                     }
                     printDiccionary(num_entries,diccionario);
-                    */
-                } else {
-                    // Palabra clave no reconocida, hacer algo por defecto
-                    printf("\nComando no reconocido\n");
+                    
+
+
+                     //[!] Liberar memoria
+                    free(token);
+
+                    
                 }
 
+            }
 
             if (send(new_sockfd, buffer, n, 0) == -1) {
                 perror("send");
                 close(new_sockfd);
                 break;
             }
-                
-               
-
-               
-            
-
-
         }
-        
 
-        if (n == 0) {
-            printf("Servidor: conexión cerrada por el cliente.\n");
-        } else if (n < 0) {
-            perror("recv");
-        }
-        
         if (n == 0) {
             printf("Servidor: conexión cerrada por el cliente.\n");
         } else if (n < 0) {
@@ -207,12 +384,8 @@ int main() {
         }
 
         close(new_sockfd);
-
-        
     }
 
     close(sockfd);
     return 0;
 }
-
-
