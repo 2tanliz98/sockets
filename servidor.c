@@ -62,19 +62,19 @@ int main() {
     regex_t regex_select, regex_insert, regex_update, regex_delete;
     int regerr,regerr1,regerr2,regerr3;
 
-    regerr = regcomp(&regex_select,  "^SELECT . FROM [A-z]+", REG_EXTENDED );
+    regerr = regcomp(&regex_select,  "^SELECT .+ FROM [A-z]+", REG_EXTENDED );
     regerr1 = regcomp(&regex_insert, "^INSERT INTO [A-z]+ VALUES .+", REG_EXTENDED );
     regerr2 = regcomp(&regex_update, "^UPDATE [A-z]+ SET .+ WHERE id = [0-9]+$", REG_EXTENDED );
     regerr3 = regcomp(&regex_delete, "^DELETE FROM [A-z]+ WHERE id = [0-9]+$", REG_EXTENDED );
     
-    if (regerr == 0 && regerr1 == 0 && regerr2  == 0 && regerr3  == 0 )
+/*    if (regerr == 0 && regerr1 == 0 && regerr2  == 0 && regerr3  == 0 )
     {
         printf("all regex compiled successfully\n");
     } else
     {
         printf(" regex compilation error\n" );
     }
-
+*/
 
     //INICIARLIZAR BASE DE DATOS.
     FILE *archivo;
@@ -181,7 +181,7 @@ int main() {
                 {
                     printf("\nSelect\n");
                     char *token = strtok(buffer, " ");
-                    char* params[2];
+                    char ** params[5];
                     int i = 0;
                     while(token != 0)
                     {
@@ -192,37 +192,34 @@ int main() {
                            // Agregando cada parametro al arreglo de cadenas
                             params[i] = malloc(strlen(token) * sizeof(char*) ); 
                             strcpy(params[i], token);
-                            //printf("\nPARAMETROS: %s\n",params[i]);
+                            printf("\nPARAMETROS: %s\n",params[i]);
                             i++;
                         }
-                        
                         //Iterar al siguiente token
                         token = strtok(0," ");
-                    }
-
-                    //[!] Arreglo Params ahora tiene los parametros para hacer la "consulta".
-                    
+                    }                    
 
                     if (strcmp(params[0], "*") == 0) // Caso mas simple, SELECT *
                     {
                         printDiccionary(num_entries,diccionario);
                     } else
                     {
-                        //int num_params = strlen(diccionario);
-                        //seleccionar(diccionario,params,num_params,num_entries);
+                        seleccionar(diccionario,params,i,num_entries);
                     }
                     
                     //[!] Liberar memoria
                     free(token);
-                    free(params[0]);
-                    free(params[1]);
-                    
+                    for (int j = 0; j < i; j++) {
+                        free(params[j]);
+                    }
+
+
                 } else if (regerr1 == 0)
                 {
                     printf("\nInsert\n");
 
                     char *token = strtok(buffer, " ");
-                    char* params[4];
+                    char* params[5];
                     int i = 0;
                     while(token != 0)
                     {
