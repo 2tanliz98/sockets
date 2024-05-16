@@ -78,8 +78,8 @@ int main() {
 
     //INICIARLIZAR BASE DE DATOS.
     FILE *archivo;
-    char line[TANIA_DB_MAX_LINE_LENGTH];
-    struct Alumno diccionario[TANIA_DB_MAX_ENTRIES];
+    char line[MAX_LINE_LENGTH];
+    struct Alumno diccionario[MAX_ENTRIES];
     int num_entries = 0;
 
     int id, semestre;
@@ -336,10 +336,6 @@ int main() {
                     }
                     printDiccionary(num_entries,diccionario);
                     
-
-
-                     //[!] Liberar memoria
-                    //free(token);
 
                     
                 }
