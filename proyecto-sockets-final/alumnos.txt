@@ -1,0 +1,3 @@
+Id,Nombre,Apellido,Semestre,Carrera
+1,Augusto,Lopez,0,Contabilidad
+3,Santi,Perez,10,Computacion
